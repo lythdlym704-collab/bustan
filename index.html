@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1f5a2c">
+<meta name="description" content="أرض خضراء تنبت فيها نخلة مع كل تسبيحة">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="بستان التسبيح">
+<title>بستان التسبيح</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Readex+Pro:wght@300;500;700&display=swap">
+<style>
+/* Layout: full-bleed living scene (sky, dunes, green field) with a glass counter on top and one big tasbih button at the bottom */
+:root{
+  --palm:#1f5a2c;
+  --palm-deep:#123d1d;
+  --gold:#f3d68a;
+  --gold-deep:#c9a24a;
+  --ink:#16301b;
+  --glass:rgba(255,253,244,.72);
+  --glass-line:rgba(255,255,255,.65);
+  --sky:#7fbde3;
+  --f-display:"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif;
+  --f-ui:"Readex Pro", "Segoe UI", Tahoma, sans-serif;
+  color-scheme: light;
+}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{background:var(--sky);color:var(--ink);font-family:var(--f-ui);-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#stage{position:fixed;inset:0;direction:rtl}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+
+.top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:center;
+  padding-top:calc(env(safe-area-inset-top,0px) + 14px);
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));pointer-events:none}
+.counter{pointer-events:auto;display:flex;align-items:center;gap:16px;background:var(--glass);
+  backdrop-filter:blur(10px) saturate(1.2);-webkit-backdrop-filter:blur(10px) saturate(1.2);
+  border:1px solid var(--glass-line);border-radius:22px;padding:10px 12px 10px 20px;
+  box-shadow:0 10px 30px rgba(20,50,25,.18)}
+.count-block{display:flex;flex-direction:column;align-items:flex-start;line-height:1}
+.count-label{font-size:12px;letter-spacing:.02em;color:#3d5a3f;font-weight:500}
+.count{font-size:clamp(34px,10vw,48px);font-weight:700;color:var(--palm-deep);font-variant-numeric:tabular-nums;margin-top:4px;transition:transform .18s}
+.count.bump{transform:scale(1.12)}
+.trees{font-size:12px;color:#4d6a4e;margin-top:6px}
+.reset{font-family:var(--f-ui);font-size:12px;border:1px solid rgba(31,90,44,.25);background:rgba(255,255,255,.6);color:var(--palm);
+  border-radius:12px;padding:8px 10px;cursor:pointer;min-width:64px}
+.reset.armed{background:#8a2d1f;color:#fff;border-color:#8a2d1f}
+.reset:focus-visible,.tasbih:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+.toast{position:absolute;top:calc(env(safe-area-inset-top,0px) + 112px);left:50%;transform:translate(-50%,-6px);
+  background:var(--palm-deep);color:var(--gold);font-family:var(--f-display);font-size:20px;padding:6px 18px;border-radius:999px;
+  opacity:0;transition:opacity .3s, transform .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+.bottom{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding-top:12px;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  background:linear-gradient(to top, rgba(14,40,18,.55), rgba(14,40,18,0));}
+.tasbih{position:relative;overflow:hidden;width:100%;max-width:440px;height:78px;border-radius:26px;cursor:pointer;
+  border:2px solid var(--gold-deep);
+  background:radial-gradient(120% 140% at 50% 0%, #2f7a3c 0%, var(--palm) 45%, var(--palm-deep) 100%);
+  color:var(--gold);font-family:var(--f-display);font-weight:700;font-size:38px;line-height:1;
+  box-shadow:0 8px 0 #0b2812, 0 16px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25);
+  text-shadow:0 2px 0 rgba(0,0,0,.35);transition:transform .08s, box-shadow .08s}
+.tasbih:active,.tasbih.press{transform:translateY(6px);box-shadow:0 2px 0 #0b2812, 0 8px 18px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.2)}
+.tasbih span{position:relative;z-index:1}
+.ripple{position:absolute;border-radius:50%;background:rgba(243,214,138,.35);transform:scale(0);animation:rip .6s ease-out forwards;pointer-events:none}
+@keyframes rip{to{transform:scale(1);opacity:0}}
+
+.float{position:absolute;font-family:var(--f-display);font-weight:700;font-size:22px;color:#fffbe8;
+  text-shadow:0 2px 6px rgba(0,0,0,.45);pointer-events:none;white-space:nowrap;transform:translate(-50%,0);
+  animation:rise 1.6s ease-out forwards}
+@keyframes rise{0%{opacity:0;transform:translate(-50%,10px) scale(.8)}15%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-70px) scale(1.05)}}
+
+@media (prefers-reduced-motion: reduce){
+  .float{animation-duration:1s}
+  .count{transition:none}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="scene" aria-hidden="true"></canvas>
+
+  <div class="top">
+    <div class="counter" role="status" aria-live="polite">
+      <div class="count-block">
+        <span class="count-label">عدد التسبيحات</span>
+        <span class="count" id="count">٠</span>
+        <span class="trees" id="trees">نخلة واحدة تنبت مع كل تسبيحة</span>
+      </div>
+      <button class="reset" id="reset" type="button">تصفير</button>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <div class="bottom" id="bottom">
+    <button class="tasbih" id="tasbih" type="button" aria-label="تسبيح"><span>تسبيح</span></button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const canvas=document.getElementById('scene');
+const ctx=canvas.getContext('2d');
+const stage=document.getElementById('stage');
+const btn=document.getElementById('tasbih');
+const countEl=document.getElementById('count');
+const treesEl=document.getElementById('trees');
+const resetBtn=document.getElementById('reset');
+const toastEl=document.getElementById('toast');
+const bottomEl=document.getElementById('bottom');
+
+const reduced=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CAP=400;               // most palms shown at once (oldest makes way)
+const GROW_MS=reduced?700:2600;
+const nf=new Intl.NumberFormat('ar-EG');
+
+let W=0,H=0,DPR=1,horizon=0,groundBottom=0,unitS=0;
+let bg=null,grassC=null;
+let curG=0,camA=1;
+const ZMAXF=1.25;
+function landG(n){return 0.32+0.085*Math.sqrt(n)}
+function edgeK(t){return 1+0.07*Math.sin(3*t+1)+0.045*Math.sin(7*t+2)+0.03*Math.sin(11*t)}
+let count=0;
+try{count=parseInt(localStorage.getItem('tasbih-count')||'0',10)||0}catch(e){}
+
+/* ---------- helpers ---------- */
+function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const easeOut=t=>1-Math.pow(1-t,3);
+const easeInOut=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const easeBack=t=>{const c=1.4;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2)};
+function qp(p0,p1,p2,t){const m=1-t;return[m*m*p0[0]+2*m*t*p1[0]+t*t*p2[0], m*m*p0[1]+2*m*t*p1[1]+t*t*p2[1]]}
+function qt(p0,p1,p2,t){const x=2*(1-t)*(p1[0]-p0[0])+2*t*(p2[0]-p1[0]);const y=2*(1-t)*(p1[1]-p0[1])+2*t*(p2[1]-p1[1]);const l=Math.hypot(x,y)||1;return[x/l,y/l]}
+
+/* ---------- palms ---------- */
+let palms=[];
+function makePalm(i, placed){
+  const r=rng(i*9973+17);
+  // best-candidate placement inside the oasis, so new palms fill the newly grown edges
+  const G=landG(i+1);
+  let best=null,bestD=-1;
+  for(let c=0;c<14;c++){
+    const a=r()*Math.PI*2, rr=Math.sqrt(r())*0.88*edgeK(a);
+    const X=Math.cos(a)*rr*G, Z=G*0.55+Math.sin(a)*rr*G*0.55;
+    let md=9;
+    for(let k=0;k<placed.length;k++){
+      const p=placed[k];const dd=Math.hypot(p.X-X,(p.Z-Z)*1.3);if(dd<md)md=dd;
+    }
+    if(md>bestD){bestD=md;best={X,Z}}
+  }
+  const n=15+Math.floor(r()*6);
+  const fronds=[];
+  for(let k=0;k<n;k++){
+    fronds.push({
+      th:(k/n)*Math.PI*2+(r()-.5)*0.35,
+      el:-0.45+r()*1.45,
+      len:0.48+r()*0.2,
+      droop:0.22+r()*0.4,
+      shade:r(),
+      curl:(r()-.5)*0.3
+    });
+  }
+  const nd=2+Math.floor(r()*3);
+  const dates=[];
+  for(let k=0;k<nd;k++)dates.push({off:(k-(nd-1)/2)*0.085+(r()-.5)*.03,len:0.12+r()*0.06,hue:22+r()*14,seed:r()*1e6|0});
+  return{
+    i,X:best.X,Z:best.Z,
+    h:0.85+r()*0.35,
+    lean:(r()-.5)*0.22,
+    bow:(r()-.5)*0.12,
+    hue:86+r()*22,
+    sat:38+r()*14,
+    trunkHue:24+r()*10,
+    fronds,dates,
+    phase:r()*Math.PI*2,
+    speed:0.7+r()*0.5,
+    born:0,grown:true,cache:null,cacheKey:0
+  };
+}
+function rebuildFromCount(){
+  palms=[];
+  const start=Math.max(0,count-CAP);
+  const placed=[];
+  for(let i=start;i<count;i++){const p=makePalm(i,placed);placed.push(p);palms.push(p)}
+}
+
+function proj(X,Z){
+  const zf=1/(1+1.9*Z/camA), zmin=1/(1+1.9*ZMAXF);
+  const t=(zf-zmin)/(1-zmin);
+  return{x:W/2+(X/camA)*(W*0.5)*(0.5+0.5*zf),y:horizon+(groundBottom-horizon)*t,f:zf};
+}
+function palmGeom(p){
+  const q=proj(p.X,p.Z);
+  const sc=q.f/Math.pow(camA,0.95);
+  return{bx:q.x,by:q.y,S:unitS*sc,sc};
+}
+function drawLand(c){
+  const G=curG,pts=[];
+  for(let k=0;k<=90;k++){
+    const t=k/90*Math.PI*2,e=edgeK(t);
+    pts.push(proj(Math.cos(t)*G*e, Math.max(-0.6*camA,G*0.55+Math.sin(t)*G*0.55*e)));
+  }
+  const path=()=>{c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(const q of pts)c.lineTo(q.x,q.y);c.closePath()};
+  path();c.lineJoin='round';
+  c.strokeStyle='rgba(140,110,60,.28)';c.lineWidth=14;c.stroke();
+  c.strokeStyle='rgba(120,150,70,.45)';c.lineWidth=6;c.stroke();
+  c.save();path();c.clip();c.drawImage(grassC,0,0,W,H);c.restore();
+  path();c.strokeStyle='rgba(165,200,95,.55)';c.lineWidth=2;c.stroke();
+}
+
+/* draw a palm with base at (0,0); S = size unit in css px; g = growth {trunk,crown,dates} */
+function drawPalm(c,p,S,g){
+  const L=S*p.h*g.trunk+S*0.02;
+  const pt=t=>[(p.lean*t+p.bow*Math.sin(Math.PI*t))*L,-t*L];
+  const w0=S*0.055*(0.35+0.65*g.trunk), w1=S*0.036*(0.35+0.65*g.trunk);
+  const wAt=t=>lerp(w0,w1,t)*(t<0.07?1+(0.07-t)*5:1);
+  // trunk silhouette
+  const N=24,left=[],right=[];
+  for(let k=0;k<=N;k++){const t=k/N;const q=pt(t);const w=wAt(t);left.push([q[0]-w,q[1]]);right.push([q[0]+w,q[1]])}
+  const grd=c.createLinearGradient(-w0*1.2,0,w0*1.2,0);
+  grd.addColorStop(0,`hsl(${p.trunkHue},28%,46%)`);
+  grd.addColorStop(0.45,`hsl(${p.trunkHue},26%,36%)`);
+  grd.addColorStop(1,`hsl(${p.trunkHue},30%,20%)`);
+  c.beginPath();c.moveTo(left[0][0],left[0][1]);
+  for(const q of left)c.lineTo(q[0],q[1]);
+  for(let k=right.length-1;k>=0;k--)c.lineTo(right[k][0],right[k][1]);
+  c.closePath();c.fillStyle=grd;c.fill();
+  // leaf-base rings (the date palm's diamond scale pattern)
+  const rings=Math.max(3,Math.floor(26*g.trunk*p.h));
+  c.lineCap='round';
+  for(let k=1;k<rings;k++){
+    const t=k/rings;const q=pt(t);const w=wAt(t);
+    const sh=k%2?0:w*0.25;
+    c.beginPath();c.ellipse(q[0]+sh*0.3,q[1],w*1.02,w*0.42,0,0.15,Math.PI-0.15);
+    c.strokeStyle=`hsla(${p.trunkHue},35%,14%,.55)`;c.lineWidth=Math.max(.7,S*0.006);c.stroke();
+    c.beginPath();c.ellipse(q[0]-w*0.25+sh,q[1]-w*0.18,w*0.42,w*0.2,0,Math.PI*1.1,Math.PI*1.9);
+    c.strokeStyle=`hsla(${p.trunkHue},30%,62%,.35)`;c.lineWidth=Math.max(.5,S*0.004);c.stroke();
+  }
+  const top=pt(1);
+  // fronds sorted back -> front
+  const ce=easeOut(clamp(g.crown));
+  const fr=p.fronds.map(f=>({f,z:Math.sin(f.th)})).sort((a,b)=>a.z-b.z);
+  const lw=Math.max(.55,S*0.0055);
+  let datesDrawn=false;
+  for(const {f,z} of fr){
+    if(!datesDrawn && z>0){drawDates(c,p,S,top,g);datesDrawn=true}
+    const el=lerp(1.45,f.el,ce);
+    const Lf=S*f.len*(0.25+0.75*ce);
+    const cx=Math.cos(f.th);
+    const dir=[cx*Math.cos(el)*0.95+f.curl*0.2, -Math.sin(el)];
+    const p0=[top[0],top[1]];
+    const p1=[p0[0]+dir[0]*Lf*0.55, p0[1]+dir[1]*Lf*0.55];
+    const p2=[p0[0]+dir[0]*Lf, p0[1]+dir[1]*Lf+f.droop*ce*Lf*0.95];
+    const light=24+((z+1)/2)*16+f.shade*6;
+    const hue=p.hue+(f.shade-.5)*8;
+    // leaflets, two passes for the two sides (upper side catches more light)
+    for(let side=-1;side<=1;side+=2){
+      c.beginPath();
+      const n=26;
+      for(let k=2;k<n;k++){
+        const u=k/n;
+        const P=qp(p0,p1,p2,u);const T=qt(p0,p1,p2,u);
+        const Nn=[-T[1]*side,T[0]*side];
+        const beta=0.95;
+        let dx=T[0]*Math.cos(beta)+Nn[0]*Math.sin(beta);
+        let dy=T[1]*Math.cos(beta)+Nn[1]*Math.sin(beta)+0.55*ce;
+        const dl=Math.hypot(dx,dy)||1;dx/=dl;dy/=dl;
+        const len=Lf*0.3*Math.pow(Math.sin(Math.PI*(0.12+0.86*u)),0.75)*(0.3+0.7*ce)*(0.85+0.15*Math.abs(cx));
+        c.moveTo(P[0],P[1]);
+        c.quadraticCurveTo(P[0]+dx*len*0.55,P[1]+dy*len*0.55-len*0.06,P[0]+dx*len,P[1]+dy*len+len*0.12);
+      }
+      const sideLight=side<0?light+5:light-3;
+      c.strokeStyle=`hsl(${hue},${p.sat}%,${sideLight}%)`;
+      c.lineWidth=lw;c.stroke();
+    }
+    // rachis (midrib)
+    c.beginPath();c.moveTo(p0[0],p0[1]);c.quadraticCurveTo(p1[0],p1[1],p2[0],p2[1]);
+    c.strokeStyle=`hsl(${hue-18},${p.sat+10}%,${light+12}%)`;c.lineWidth=lw*1.5;c.stroke();
+  }
+  if(!datesDrawn)drawDates(c,p,S,top,g);
+  // crown heart
+  c.beginPath();c.ellipse(top[0],top[1]+S*0.01,S*0.035*(0.3+0.7*ce),S*0.028*(0.3+0.7*ce),0,0,Math.PI*2);
+  c.fillStyle=`hsl(${p.trunkHue+30},30%,24%)`;c.fill();
+}
+function drawDates(c,p,S,top,g){
+  const t=easeBack(clamp(g.dates));if(t<=0)return;
+  for(const d of p.dates){
+    const r=rng(d.seed);
+    const sx=top[0]+d.off*S, sy=top[1]+S*0.02;
+    const ex=sx+d.off*S*0.6, ey=sy+d.len*S*t;
+    c.beginPath();c.moveTo(top[0],top[1]);c.quadraticCurveTo(sx,sy-S*0.01,ex,ey-S*0.03*t);
+    c.strokeStyle=`hsl(38,60%,45%)`;c.lineWidth=Math.max(.6,S*0.006);c.stroke();
+    const n=22;
+    for(let k=0;k<n;k++){
+      const u=k/n;
+      const x=ex+(r()-.5)*S*0.06*(1-u*0.5)*t;
+      const y=ey-S*0.035*t+u*S*0.075*t;
+      const rr=Math.max(.6,S*0.0095*t);
+      c.beginPath();c.ellipse(x,y,rr*0.8,rr*1.15,0,0,Math.PI*2);
+      const l=34+r()*16;
+      c.fillStyle=`hsl(${d.hue},80%,${l}%)`;c.fill();
+    }
+  }
+}
+
+/* cache fully grown palms as images; sway is applied as a skew from the base */
+function cachePalm(p,S){
+  const pad=S*0.85, top=S*(p.h+0.75), bot=S*0.06;
+  const cw=Math.ceil(pad*2), ch=Math.ceil(top+bot);
+  const oc=document.createElement('canvas');
+  oc.width=Math.max(1,Math.ceil(cw*DPR));oc.height=Math.max(1,Math.ceil(ch*DPR));
+  const c=oc.getContext('2d');
+  c.scale(DPR,DPR);c.translate(pad,top);
+  drawPalm(c,p,S,{trunk:1,crown:1,dates:1});
+  p.cache={img:oc,w:cw,h:ch,ox:pad,oy:top};
+  p.cacheKey=S;
+}
+
+/* ---------- background ---------- */
+function buildBackground(){
+  const oc=document.createElement('canvas');oc.width=W*DPR;oc.height=H*DPR;
+  const c=oc.getContext('2d');c.scale(DPR,DPR);
+  // sky
+  const sky=c.createLinearGradient(0,0,0,horizon);
+  sky.addColorStop(0,'#3a7fc4');sky.addColorStop(0.55,'#86c2e6');sky.addColorStop(0.9,'#d9ecef');sky.addColorStop(1,'#f4e6c3');
+  c.fillStyle=sky;c.fillRect(0,0,W,horizon+2);
+  // sun
+  const sx=W*0.18, sy=horizon*0.38, sr=Math.min(W,H)*0.05;
+  const glow=c.createRadialGradient(sx,sy,0,sx,sy,sr*7);
+  glow.addColorStop(0,'rgba(255,248,215,.95)');glow.addColorStop(0.12,'rgba(255,240,190,.6)');glow.addColorStop(1,'rgba(255,240,190,0)');
+  c.fillStyle=glow;c.fillRect(0,0,W,horizon);
+  c.beginPath();c.arc(sx,sy,sr,0,Math.PI*2);c.fillStyle='#fffbe9';c.fill();
+  // dunes
+  const r=rng(42);
+  const layers=[{y:horizon-H*0.06,amp:H*0.03,col:'#e3c995'},{y:horizon-H*0.025,amp:H*0.02,col:'#cfb27a'}];
+  for(const L of layers){
+    c.beginPath();c.moveTo(0,horizon+2);
+    const f1=1+r()*2,f2=3+r()*3,ph=r()*6;
+    for(let x=0;x<=W;x+=6){const y=L.y-Math.sin(x/W*Math.PI*f1+ph)*L.amp-Math.sin(x/W*Math.PI*f2+ph*2)*L.amp*0.35;c.lineTo(x,y)}
+    c.lineTo(W,horizon+2);c.closePath();c.fillStyle=L.col;c.fill();
+  }
+  // distant oasis tree line
+  for(let x=-10;x<W+10;x+=4+r()*10){
+    const hgt=H*(0.012+r()*0.03);const y=horizon+1;
+    c.strokeStyle='rgba(60,95,55,.55)';c.lineWidth=1;
+    c.beginPath();c.moveTo(x,y);c.lineTo(x+r()*2-1,y-hgt);c.stroke();
+    c.fillStyle='rgba(55,95,50,.6)';
+    for(let k=0;k<5;k++){const a=-Math.PI/2+(k-2)*0.6;c.beginPath();c.ellipse(x+Math.cos(a)*hgt*0.18,y-hgt+Math.sin(a)*hgt*0.08+hgt*0.05,hgt*0.22,hgt*0.05,a,0,Math.PI*2);c.fill()}
+  }
+  // desert floor
+  const sg=c.createLinearGradient(0,horizon,0,H);
+  sg.addColorStop(0,'#ecd8a8');sg.addColorStop(0.5,'#e0c38a');sg.addColorStop(1,'#cfa968');
+  c.fillStyle=sg;c.fillRect(0,horizon,W,H-horizon);
+  for(let k=0;k<Math.floor((H-horizon)/5);k++){
+    const t=Math.pow(r(),0.8),y=horizon+4+t*(H-horizon),x=r()*W,len=(20+r()*80)*(0.3+t);
+    c.strokeStyle=r()>.5?'rgba(255,240,205,.35)':'rgba(150,110,60,.18)';c.lineWidth=0.6+t;
+    c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+len/2,y-2-t*3,x+len,y);c.stroke();
+  }
+  bg=oc;
+  // grass layer, clipped to the oasis every frame
+  const go=document.createElement('canvas');go.width=W*DPR;go.height=H*DPR;
+  const gc=go.getContext('2d');gc.scale(DPR,DPR);grassC=go;
+  drawGrass(gc,r);
+}
+function drawGrass(c,r){
+  const gg=c.createLinearGradient(0,horizon,0,H);
+  gg.addColorStop(0,'#9cbf63');gg.addColorStop(0.08,'#7fae4b');gg.addColorStop(0.5,'#4f8f35');gg.addColorStop(1,'#2f6b25');
+  c.fillStyle=gg;c.fillRect(0,horizon,W,H-horizon);
+  // soft light patches
+  for(let k=0;k<14;k++){
+    const x=r()*W,y=horizon+Math.pow(r(),0.7)*(H-horizon);const rr=(20+r()*120)*(0.3+(y-horizon)/(H-horizon));
+    const pg=c.createRadialGradient(x,y,0,x,y,rr);
+    const light=r()>.5;pg.addColorStop(0,light?'rgba(190,225,120,.18)':'rgba(25,70,25,.16)');pg.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=pg;c.beginPath();c.ellipse(x,y,rr*1.8,rr*0.5,0,0,Math.PI*2);c.fill();
+  }
+  // grass blades
+  const blades=Math.min(9000,Math.floor(W*(H-horizon)/55));
+  c.lineCap='round';
+  for(let k=0;k<blades;k++){
+    const t=Math.pow(r(),0.75);const y=horizon+2+t*(H-horizon);
+    const x=r()*W;const s=0.3+t*1.6;const len=(3+r()*6)*s;const lean=(r()-.5)*len*0.8;
+    const hue=80+r()*30,l=22+r()*28+(1-t)*12;
+    c.strokeStyle=`hsla(${hue},${45+r()*20}%,${l}%,${0.55+r()*0.4})`;c.lineWidth=Math.max(.5,0.9*s*0.7);
+    c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+lean*0.3,y-len*0.6,x+lean,y-len);c.stroke();
+  }
+  // tiny wildflowers
+  for(let k=0;k<Math.floor(W/14);k++){
+    const t=Math.pow(r(),0.6);const y=horizon+6+t*(H-horizon);const x=r()*W;const s=0.6+t*1.6;
+    c.fillStyle=r()>.5?'rgba(255,245,200,.85)':'rgba(250,215,110,.8)';c.beginPath();c.arc(x,y,s,0,Math.PI*2);c.fill();
+  }
+}
+/* clouds */
+let clouds=[];
+function buildClouds(){
+  clouds=[];const r=rng(7);
+  for(let k=0;k<4;k++){
+    const cw=Math.min(W*0.5,260)*(0.6+r()*0.6),chh=cw*0.32;
+    const oc=document.createElement('canvas');oc.width=cw*DPR;oc.height=chh*DPR;const c=oc.getContext('2d');c.scale(DPR,DPR);
+    for(let b=0;b<14;b++){
+      const x=cw*(0.15+r()*0.7),y=chh*(0.45+r()*0.3),rr=chh*(0.18+r()*0.28);
+      const g=c.createRadialGradient(x,y,0,x,y,rr);g.addColorStop(0,'rgba(255,255,255,.85)');g.addColorStop(1,'rgba(255,255,255,0)');
+      c.fillStyle=g;c.beginPath();c.arc(x,y,rr,0,Math.PI*2);c.fill();
+    }
+    clouds.push({img:oc,w:cw,h:chh,x:r()*W,y:horizon*(0.08+r()*0.45),v:4+r()*7});
+  }
+}
+
+/* ---------- particles (soil burst) ---------- */
+let parts=[];
+function burst(x,y,S){
+  const n=reduced?6:16;
+  for(let k=0;k<n;k++){
+    const a=-Math.PI/2+(Math.random()-.5)*2.2;const sp=(40+Math.random()*90)*(S/220+0.4);
+    parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0,max:0.6+Math.random()*0.4,r:Math.max(1,S*0.008*(0.6+Math.random())),
+      col:Math.random()>.4?`hsl(28,${35+Math.random()*20}%,${24+Math.random()*14}%)`:`hsl(95,45%,${30+Math.random()*15}%)`});
+  }
+}
+
+/* ---------- layout ---------- */
+function resize(){
+  const rect=stage.getBoundingClientRect();
+  W=Math.max(1,rect.width);H=Math.max(1,rect.height);
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  canvas.width=Math.round(W*DPR);canvas.height=Math.round(H*DPR);
+  horizon=H*0.4;
+  const bt=bottomEl.getBoundingClientRect().top-rect.top;
+  groundBottom=Math.max(horizon+40,bt+6);
+  unitS=Math.min(H*0.34,W*0.62);
+  buildBackground();buildClouds();
+  for(const p of palms){p.cache=null}
+  if(!curG)curG=landG(count);camA=Math.max(1,curG/1.1);
+}
+
+/* ---------- interaction ---------- */
+let toastT=0;
+function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('show'),1800)}
+function updateCounter(bump){
+  countEl.textContent=nf.format(count);
+  const visible=palms.length;
+  const area=Math.round(Math.PI*Math.pow(landG(count)*40,2)*0.55/10)*10;
+  treesEl.textContent=count===0?'نخلة واحدة تنبت مع كل تسبيحة':`النخيل: ${nf.format(visible)} · مساحة الأرض: ${nf.format(area)} م²`;
+  if(bump){countEl.classList.remove('bump');void countEl.offsetWidth;countEl.classList.add('bump');setTimeout(()=>countEl.classList.remove('bump'),160)}
+}
+function save(){try{localStorage.setItem('tasbih-count',String(count))}catch(e){}}
+
+function tasbih(ev){
+  const placed=palms;
+  const p=makePalm(count,placed);
+  count++;
+  p.born=performance.now();p.grown=false;
+  palms.push(p);
+  if(palms.length>CAP)palms.shift();
+  const g=palmGeom(p);
+  burst(g.bx,g.by,g.S);
+  // floating phrase
+  const f=document.createElement('div');f.className='float';f.textContent='سبحان الله';
+  f.style.left=g.bx+'px';f.style.top=Math.max(80,g.by-g.S*0.55)+'px';
+  f.style.fontSize=Math.round(16+g.sc*10)+'px';
+  stage.appendChild(f);f.addEventListener('animationend',()=>f.remove());
+  // ripple on button
+  const r=btn.getBoundingClientRect();const rp=document.createElement('span');rp.className='ripple';
+  const size=Math.max(r.width,r.height)*1.2;
+  const cx=(ev&&ev.clientX)?ev.clientX-r.left:r.width/2, cy=(ev&&ev.clientY)?ev.clientY-r.top:r.height/2;
+  rp.style.width=rp.style.height=size+'px';rp.style.left=(cx-size/2)+'px';rp.style.top=(cy-size/2)+'px';
+  btn.appendChild(rp);rp.addEventListener('animationend',()=>rp.remove());
+  try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}
+  if(count%33===0)toast(`اكتملت ${nf.format(count)} تسبيحة`);
+  else if([10,25,50,100,200,300,500,1000].includes(count))toast('اتّسعت الأرض');
+  updateCounter(true);save();
+}
+btn.addEventListener('click',tasbih);
+
+let armT=0;
+resetBtn.addEventListener('click',()=>{
+  if(!resetBtn.classList.contains('armed')){
+    resetBtn.classList.add('armed');resetBtn.textContent='تأكيد؟';
+    clearTimeout(armT);armT=setTimeout(()=>{resetBtn.classList.remove('armed');resetBtn.textContent='تصفير'},3000);
+    return;
+  }
+  clearTimeout(armT);resetBtn.classList.remove('armed');resetBtn.textContent='تصفير';
+  count=0;palms=[];parts=[];save();updateCounter(false);toast('بدأ بستان جديد');
+});
+
+/* ---------- loop ---------- */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  const time=now/1000;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(bg)ctx.drawImage(bg,0,0,W,H);
+  const tg=landG(count);curG+=(tg-curG)*(1-Math.exp(-dt*(reduced?20:2.2)));
+  camA=Math.max(1,curG/1.1);
+  // clouds
+  for(const cl of clouds){
+    if(!reduced)cl.x+=cl.v*dt;if(cl.x>W+20)cl.x=-cl.w-20;
+    ctx.drawImage(cl.img,cl.x,cl.y,cl.w,cl.h);
+  }
+  if(grassC)drawLand(ctx);
+  const gust=reduced?0:(Math.sin(time*0.35)*0.5+0.5)*0.6+0.4;
+  const sorted=palms.slice().sort((a,b)=>b.Z-a.Z);
+  let cachedThisFrame=0;
+  for(const p of sorted){
+    const {bx,by,S}=palmGeom(p);
+    let gt=1;
+    if(!p.grown){gt=clamp((now-p.born)/GROW_MS);if(gt>=1)p.grown=true}
+    const g={trunk:easeInOut(clamp((gt-0.06)/0.64)),crown:clamp((gt-0.04)/0.82),dates:clamp((gt-0.78)/0.22)};
+    // shadow + soil mound
+    const sh=0.2*easeOut(clamp(gt*1.5));
+    ctx.beginPath();ctx.ellipse(bx+S*0.16*g.trunk,by+S*0.012,S*(0.08+0.3*g.crown),S*(0.02+0.045*g.crown),0,0,Math.PI*2);
+    ctx.fillStyle=`rgba(15,40,12,${sh})`;ctx.fill();
+    ctx.beginPath();ctx.ellipse(bx,by+S*0.004,S*0.06,S*0.016,0,0,Math.PI*2);
+    ctx.fillStyle=`rgba(90,62,35,${0.55*clamp(gt*3)})`;ctx.fill();
+    const sway=reduced?0:(Math.sin(time*p.speed+p.phase)*0.018+Math.sin(time*p.speed*2.3+p.phase*1.7)*0.006)*gust*(0.6+0.4*g.trunk);
+    ctx.save();ctx.translate(bx,by);ctx.transform(1,0,-sway,1,0,0);
+    if(p.grown){
+      const ratio=p.cache?S/p.cacheKey:0;
+      if(!p.cache||ratio<0.8||ratio>1.15){
+        if(cachedThisFrame<8||!p.cache){cachePalm(p,S);cachedThisFrame++}
+      }
+      const k=S/p.cacheKey;
+      ctx.drawImage(p.cache.img,-p.cache.ox*k,-p.cache.oy*k,p.cache.w*k,p.cache.h*k);
+    }else{
+      drawPalm(ctx,p,S,g);
+    }
+    ctx.restore();
+  }
+  // soil particles
+  for(let k=parts.length-1;k>=0;k--){
+    const q=parts[k];q.life+=dt;if(q.life>q.max){parts.splice(k,1);continue}
+    q.vy+=320*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;
+    ctx.globalAlpha=1-q.life/q.max;ctx.fillStyle=q.col;ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  requestAnimationFrame(frame);
+}
+
+/* ---------- boot ---------- */
+rebuildFromCount();
+resize();
+updateCounter(false);
+window.addEventListener('resize',()=>{resize()});
+requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})})}
+</script>
+
+</body>
+</html>
